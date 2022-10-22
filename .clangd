@@ -28,9 +28,9 @@ If:
 CompileFlags:
   Compiler: clang++
   Add:
-    - "-x"
-    - "cuda"
-    - "-D__NVCOMPILER"
+    - -x
+    - cuda
+    - -D__NVCOMPILER
 
 ---
 
