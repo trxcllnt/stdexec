@@ -66,7 +66,7 @@ rapids_cmake_build_type(Release)
 # - Dependencies -------------------------------------------------------------
 
 # Initialize CPM
-rapids_cpm_init()
+rapids_cpm_init(OVERRIDE "${CMAKE_CURRENT_SOURCE_DIR}/cpm_versions.json")
 
 # Add Catch2
 set(Catch2_VERSION 2.13.6)
@@ -78,6 +78,15 @@ rapids_cpm_find(Catch2 ${Catch2_VERSION}
   CPM_ARGS
     URL https://github.com/catchorg/Catch2/archive/refs/tags/v${Catch2_VERSION}.zip
 )
+
+# find libcu++
+include(${rapids-cmake-dir}/cpm/libcudacxx.cmake)
+rapids_cpm_libcudacxx(BUILD_EXPORT_SET stdexec-exports INSTALL_EXPORT_SET stdexec-exports)
+
+# Find or add Thrust
+include(${rapids-cmake-dir}/cpm/thrust.cmake)
+rapids_cpm_thrust(NAMESPACE stdexec BUILD_EXPORT_SET stdexec-exports INSTALL_EXPORT_SET stdexec-exports)
+# thrust_create_target(stdexec::Thrust_OMP DEVICE OMP)
 
 # Ensure that we link with the threading library
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
@@ -100,7 +109,7 @@ target_include_directories(stdexec INTERFACE
                            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
                            )
 
-target_link_libraries(stdexec INTERFACE Threads::Threads)
+target_link_libraries(stdexec INTERFACE Threads::Threads libcudacxx::libcudacxx)
 
 # Use C++20 standard
 target_compile_features(stdexec INTERFACE cxx_std_20)
@@ -165,6 +174,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC" OR STDEXEC_ENABLE_CUDA)
 
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
       target_compile_options(CUDASchedulers INTERFACE -x cu -Wno-unknown-cuda-version)
+      target_compile_options(CUDASchedulers INTERFACE -fmacro-backtrace-limit=0)
+      target_compile_options(CUDASchedulers INTERFACE -Xclang=-fcuda-allow-variadic-functions)
       foreach(arch IN LISTS CMAKE_CUDA_ARCHITECTURES)
         target_compile_options(CUDASchedulers INTERFACE --cuda-gpu-arch=sm_${arch})
       endforeach()
